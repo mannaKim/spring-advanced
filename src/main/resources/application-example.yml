@@ -18,4 +18,4 @@ spring:
 
 jwt:
   secret:
-    key:
+    key: jwt-secret-key
