@@ -8,6 +8,8 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.example.expert.domain.auth.security.CustomUserDetails;
+import org.example.expert.domain.auth.security.SecurityUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -36,10 +38,12 @@ public class ApiLoggingAspect {
 
     @Around("cut()")
     public Object logAdminApi(ProceedingJoinPoint proceedingJoinPoint) throws Throwable {
+        CustomUserDetails userDetails = SecurityUtil.getAuthenticatedUser();
+
         Method method = getMethod(proceedingJoinPoint);
         String requestUrl = request.getRequestURI();
         String requestMethod = request.getMethod();
-        Long userId = (Long) request.getAttribute("userId");
+        Long userId = userDetails.getId();
 
         log.info("======= [Admin API Request] =======");
         log.info("Request User ID: {}", userId);
