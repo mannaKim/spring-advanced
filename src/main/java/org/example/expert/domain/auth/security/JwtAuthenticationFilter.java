@@ -1,5 +1,6 @@
 package org.example.expert.domain.auth.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.*;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -7,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -15,6 +17,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -37,8 +41,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String bearerJwt = request.getHeader("Authorization");
 
         if (bearerJwt == null) {
-            // 토큰이 없는 경우 400을 반환합니다.
-            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "JWT 토큰이 필요합니다.");
+            String message = "JWT 토큰이 필요합니다.";
+            log.warn(message);
+            sendErrorResponse(response, HttpStatus.BAD_REQUEST, message);
             return;
         }
 
@@ -48,7 +53,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             // JWT 유효성 검사와 claims 추출
             Claims claims = jwtUtil.extractClaims(jwt);
             if (claims == null) {
-                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "잘못된 JWT 토큰입니다.");
+                String message = "잘못된 JWT 토큰입니다.";
+                log.warn(message);
+                sendErrorResponse(response, HttpStatus.BAD_REQUEST, message);
                 return;
             }
 
@@ -61,15 +68,33 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
         } catch (ExpiredJwtException e) {
-            log.error("만료된 JWT 토큰입니다.", e);
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "만료된 JWT 토큰입니다.");
+            String message = "만료된 JWT 토큰입니다.";
+            log.error(message, e);
+            sendErrorResponse(response, HttpStatus.UNAUTHORIZED, message);
             return;
-        } catch (JwtException | IllegalArgumentException e) {
-            log.error("유효하지 않은 JWT 토큰입니다.", e);
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "유효하지 않은 JWT 토큰입니다.");
+        } catch (JwtException e) {
+            String message = "유효하지 않은 JWT 토큰입니다.";
+            log.error(message, e);
+            sendErrorResponse(response, HttpStatus.UNAUTHORIZED, message);
             return;
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private void sendErrorResponse(HttpServletResponse response, HttpStatus status, String message) throws IOException {
+        Map<String, Object> responseContent = new LinkedHashMap<>();
+        responseContent.put("status", status.name());
+        responseContent.put("code", status.value());
+        responseContent.put("message", message);
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        String jsonResponse = objectMapper.writeValueAsString(responseContent);
+
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        response.setStatus(status.value());
+        response.getWriter().write(jsonResponse);
+        response.getWriter().flush();
     }
 }
