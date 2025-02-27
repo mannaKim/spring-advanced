@@ -1,6 +1,6 @@
 package org.example.expert.domain.auth.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import static org.example.expert.common.utils.ResponseUtil.sendErrorResponse;
 import io.jsonwebtoken.*;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -17,8 +17,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -72,7 +70,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             log.error(message, e);
             sendErrorResponse(response, HttpStatus.UNAUTHORIZED, message);
             return;
-        } catch (JwtException e) {
+        } catch (JwtException | IllegalArgumentException e) {
             String message = "유효하지 않은 JWT 토큰입니다.";
             log.error(message, e);
             sendErrorResponse(response, HttpStatus.UNAUTHORIZED, message);
@@ -80,21 +78,5 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
-    }
-
-    private void sendErrorResponse(HttpServletResponse response, HttpStatus status, String message) throws IOException {
-        Map<String, Object> responseContent = new LinkedHashMap<>();
-        responseContent.put("status", status.name());
-        responseContent.put("code", status.value());
-        responseContent.put("message", message);
-
-        ObjectMapper objectMapper = new ObjectMapper();
-        String jsonResponse = objectMapper.writeValueAsString(responseContent);
-
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-        response.setStatus(status.value());
-        response.getWriter().write(jsonResponse);
-        response.getWriter().flush();
     }
 }
