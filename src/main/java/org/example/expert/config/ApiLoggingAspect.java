@@ -6,13 +6,13 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
-import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
-import org.example.expert.domain.auth.security.CustomUserDetails;
-import org.example.expert.domain.auth.security.SecurityUtil;
+import org.example.expert.domain.common.dto.AuthUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Method;
@@ -32,18 +32,15 @@ public class ApiLoggingAspect {
         this.objectMapper = objectMapper;
     }
 
-    @Pointcut("execution(* org.example.expert.domain.comment.controller.CommentAdminController.deleteComment(..)) " +
-            "|| execution(* org.example.expert.domain.user.controller.UserAdminController.changeUserRole(..))")
-    private void cut(){}
-
-    @Around("cut()")
+    @Around("@annotation(org.springframework.security.access.annotation.Secured)")
     public Object logAdminApi(ProceedingJoinPoint proceedingJoinPoint) throws Throwable {
-        CustomUserDetails userDetails = SecurityUtil.getAuthenticatedUser();
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        AuthUser authUser = (AuthUser) authentication.getPrincipal();
 
         Method method = getMethod(proceedingJoinPoint);
         String requestUrl = request.getRequestURI();
         String requestMethod = request.getMethod();
-        Long userId = userDetails.getId();
+        Long userId = authUser.getId();
 
         log.info("======= [Admin API Request] =======");
         log.info("Request User ID: {}", userId);

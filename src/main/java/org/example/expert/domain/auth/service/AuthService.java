@@ -1,15 +1,15 @@
 package org.example.expert.domain.auth.service;
 
 import lombok.RequiredArgsConstructor;
-import org.example.expert.domain.auth.security.CustomUserDetails;
-import org.example.expert.domain.auth.security.JwtUtil;
+import org.example.expert.domain.auth.dto.request.SigninRequest;
 import org.example.expert.domain.auth.dto.request.SignupRequest;
-import org.example.expert.domain.auth.dto.response.SignupResponse;
+import org.example.expert.domain.auth.dto.response.AuthResponse;
+import org.example.expert.domain.auth.exception.AuthException;
+import org.example.expert.common.security.JwtUtil;
 import org.example.expert.domain.common.exception.InvalidRequestException;
 import org.example.expert.domain.user.entity.User;
 import org.example.expert.domain.user.enums.UserRole;
 import org.example.expert.domain.user.repository.UserRepository;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,7 +23,7 @@ public class AuthService {
     private final JwtUtil jwtUtil;
 
     @Transactional
-    public SignupResponse signup(SignupRequest signupRequest) {
+    public AuthResponse signup(SignupRequest signupRequest) {
         if (userRepository.existsByEmail(signupRequest.getEmail())) {
             throw new InvalidRequestException("이미 존재하는 이메일입니다.");
         }
@@ -39,9 +39,21 @@ public class AuthService {
         );
         User savedUser = userRepository.save(newUser);
 
-        UserDetails userDetails = new CustomUserDetails(savedUser);
-        String bearerToken = jwtUtil.createToken(userDetails);
+        String bearerToken = jwtUtil.createToken(savedUser.getId(), savedUser.getEmail(), savedUser.getUserRole());
 
-        return new SignupResponse(bearerToken);
+        return new AuthResponse(bearerToken);
+    }
+
+    public AuthResponse signin(SigninRequest signinRequest) {
+        User user = userRepository.findByEmail(signinRequest.getEmail())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (!passwordEncoder.matches(signinRequest.getPassword(), user.getPassword())) {
+            throw new AuthException("잘못된 비밀번호입니다.");
+        }
+
+        String bearerToken = jwtUtil.createToken(user.getId(), user.getEmail(), user.getUserRole());
+
+        return new AuthResponse(bearerToken);
     }
 }

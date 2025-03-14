@@ -39,7 +39,7 @@ class CommentServiceTest {
         // given
         long todoId = 1;
         CommentSaveRequest request = new CommentSaveRequest("contents");
-        AuthUser authUser = new AuthUser(1L, "email", UserRole.USER);
+        AuthUser authUser = new AuthUser(1L, "email", UserRole.ROLE_USER);
 
         given(todoRepository.findById(anyLong())).willReturn(Optional.empty());
 
@@ -57,7 +57,7 @@ class CommentServiceTest {
         // given
         long todoId = 1;
         CommentSaveRequest request = new CommentSaveRequest("contents");
-        AuthUser authUser = new AuthUser(1L, "email", UserRole.USER);
+        AuthUser authUser = new AuthUser(1L, "email", UserRole.ROLE_USER);
         User user = User.fromAuthUser(authUser);
         Todo todo = new Todo("title", "title", "contents", user);
         Comment comment = new Comment(request.getContents(), user, todo);
